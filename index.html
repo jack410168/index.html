@@ -1,242 +1,120 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>粵語翻譯器</title>
-    <style>
-        :root { --bg: #0b0f1a; --card: #141c2e; --cyan: #00e5ff; --text: #dde6f0; }
-        body { background: var(--bg); color: var(--text); font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; user-select: none; }
-        .container { width: 100%; max-width: 500px; }
-        .input-group { background: var(--card); border: 2px solid var(--cyan); border-radius: 12px; padding: 15px; margin-bottom: 20px; }
-        input { width: 100%; background: transparent; border: none; color: var(--cyan); font-size: 1.5rem; outline: none; text-align: center; }
-        .result-box { background: var(--card); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
-        .label { font-size: 0.8rem; color: #888; }
-        .text-out { font-size: 1.3rem; min-height: 1.5em; }
-        .eng-out { color: #ffeb3b; font-size: 2rem; font-weight: bold; line-height: 1.3; }
-        #status { text-align: center; margin-top: 14px; color: #556070; font-size: 1rem; }
-        .listening { border-color: #4caf50 !important; box-shadow: 0 0 15px #4caf50; }
-        .speaking  { border-color: #ff9800 !important; box-shadow: 0 0 15px #ff9800; }
-
-        /* 啟動 overlay */
-        #startOverlay {
-            position: fixed; inset: 0;
-            background: rgba(0,0,0,0.88);
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            z-index: 999; cursor: pointer;
-        }
-        #startOverlay .icon { font-size: 4rem; animation: wiggle 1s infinite; }
-        #startOverlay p { color: var(--cyan); font-size: 1.3rem; margin-top: 20px; text-align: center; }
-        #startOverlay small { color: #aaa; margin-top: 8px; }
-        @keyframes wiggle { 0%,100%{transform:rotate(-10deg)} 50%{transform:rotate(10deg)} }
-
-        /* 等待搖動提示 */
-        #waitShake {
-            position: fixed; bottom: 40px; left: 0; right: 0;
-            display: none; justify-content: center;
-            pointer-events: none; z-index: 998;
-        }
-        #waitShake.show { display: flex; }
-        #waitShake span {
-            background: rgba(0,229,255,0.12);
-            border: 2px solid var(--cyan);
-            border-radius: 16px;
-            padding: 14px 30px;
-            color: var(--cyan); font-size: 1.1rem;
-        }
-
-        /* 搖動閃光 */
-        #shakeFlash {
-            position: fixed; inset: 0;
-            background: rgba(0,229,255,0.18);
-            pointer-events: none; z-index: 997;
-            opacity: 0; transition: opacity 0.15s;
-        }
-        #shakeFlash.flash { opacity: 1; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>粵語翻譯器</title>
+<style>
+:root{--bg:#0b0f1a;--card:#141c2e;--cyan:#00e5ff;--text:#dde6f0}
+body{background:var(--bg);color:var(--text);font-family:sans-serif;display:flex;flex-direction:column;align-items:center;padding:20px;user-select:none}
+.container{width:100%;max-width:500px}
+.input-group{background:var(--card);border:2px solid var(--cyan);border-radius:12px;padding:15px;margin-bottom:20px}
+input{width:100%;background:transparent;border:none;color:var(--cyan);font-size:1.5rem;outline:none;text-align:center}
+.result-box{background:var(--card);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:15px}
+.label{font-size:.8rem;color:#888}
+.text-out{font-size:1.3rem;min-height:1.5em}
+.eng-out{color:#ffeb3b;font-size:2rem;font-weight:bold;line-height:1.3}
+#status{text-align:center;margin-top:14px;color:#556070;font-size:1rem}
+.listening{border-color:#4caf50!important;box-shadow:0 0 15px #4caf50}
+.speaking{border-color:#ff9800!important;box-shadow:0 0 15px #ff9800}
+#startOverlay{position:fixed;inset:0;background:rgba(0,0,0,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;cursor:pointer}
+#startOverlay .icon{font-size:4rem;animation:wiggle 1s infinite}
+#startOverlay p{color:var(--cyan);font-size:1.3rem;margin-top:20px;text-align:center}
+#startOverlay small{color:#aaa;margin-top:8px}
+@keyframes wiggle{0%,100%{transform:rotate(-10deg)}50%{transform:rotate(10deg)}}
+#waitShake{position:fixed;bottom:40px;left:0;right:0;display:none;justify-content:center;pointer-events:none;z-index:998}
+#waitShake.show{display:flex}
+#waitShake span{background:rgba(0,229,255,.12);border:2px solid var(--cyan);border-radius:16px;padding:14px 30px;color:var(--cyan);font-size:1.1rem}
+#shakeFlash{position:fixed;inset:0;background:rgba(0,229,255,.18);pointer-events:none;z-index:997;opacity:0;transition:opacity .15s}
+#shakeFlash.flash{opacity:1}
+</style>
 </head>
 <body>
-
 <div id="startOverlay">
-    <div class="icon">📱</div>
-    <p>點擊啟動語音功能</p>
-    <small>需要授權麥克風</small>
+<div class="icon">📱</div>
+<p>點擊啟動語音功能</p>
+<small>需要授權麥克風</small>
 </div>
-
 <div id="waitShake"><span>📱 搖一搖繼續聆聽</span></div>
 <div id="shakeFlash"></div>
-
 <div class="container">
-    <h2 style="text-align:center; color:var(--cyan)">🎙️ 粵語翻譯並朗讀</h2>
-
-    <div class="input-group" id="inputBorder">
-        <input type="text" id="mainInput" placeholder="正在聽取廣東話..." autocomplete="off" readonly>
-    </div>
-
-    <div class="result-box">
-        <div>
-            <div class="label">廣東話原文</div>
-            <div id="originText" class="text-out">---</div>
-        </div>
-        <hr style="border:0; border-top:1px solid #2a3a5a;">
-        <div>
-            <div class="label">英文譯文（自動朗讀）</div>
-            <div id="translatedText" class="text-out eng-out">---</div>
-        </div>
-    </div>
-    <div id="status">請點擊上方啟動</div>
+<h2 style="text-align:center;color:var(--cyan)">🎙️ 粵語翻譯並朗讀</h2>
+<div class="input-group" id="inputBorder">
+<input type="text" id="mainInput" placeholder="正在聽取廣東話..." autocomplete="off" readonly>
 </div>
-
+<div class="result-box">
+<div><div class="label">廣東話原文</div><div id="originText" class="text-out">---</div></div>
+<hr style="border:0;border-top:1px solid #2a3a5a">
+<div><div class="label">英文譯文（自動朗讀）</div><div id="translatedText" class="text-out eng-out">---</div></div>
+</div>
+<div id="status">請點擊上方啟動</div>
+</div>
 <script>
-const mainInput      = document.getElementById('mainInput');
-const originText     = document.getElementById('originText');
-const translatedText = document.getElementById('translatedText');
-const statusLabel    = document.getElementById('status');
-const inputBorder    = document.getElementById('inputBorder');
-const startOverlay   = document.getElementById('startOverlay');
-const waitShake      = document.getElementById('waitShake');
-const shakeFlash     = document.getElementById('shakeFlash');
-
-let waitingForShake = false;
-let lastShake = 0;
-let activated = false;
-
-// ── 語音識別 ──────────────────────────────
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recognition;
-
-if (SpeechRecognition) {
-    recognition = new SpeechRecognition();
-    recognition.lang = 'zh-HK';
-    recognition.continuous = false;
-
-    recognition.onstart = () => {
-        inputBorder.classList.add('listening');
-        inputBorder.classList.remove('speaking');
-        statusLabel.textContent = '🔴 監聽中...';
-        mainInput.value = '';
-    };
-
-    recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        mainInput.value = transcript;
-        originText.textContent = transcript;
-        // 收到結果，停止等待搖動狀態重置，進入翻譯
-        waitingForShake = false;
-        waitShake.classList.remove('show');
-        translateAndSpeak(transcript);
-    };
-
-    recognition.onerror = (e) => {
-        statusLabel.textContent = '⚠️ ' + e.error;
-        if (!waitingForShake) setTimeout(startRec, 1000);
-    };
-
-    recognition.onend = () => {
-        inputBorder.classList.remove('listening');
-        // 只有唔係等待搖動時先自動重啟
-        if (!waitingForShake && !window.speechSynthesis.speaking) {
-            setTimeout(startRec, 400);
-        }
-    };
+const mainInput=document.getElementById('mainInput');
+const originText=document.getElementById('originText');
+const translatedText=document.getElementById('translatedText');
+const statusLabel=document.getElementById('status');
+const inputBorder=document.getElementById('inputBorder');
+const startOverlay=document.getElementById('startOverlay');
+const waitShake=document.getElementById('waitShake');
+const shakeFlash=document.getElementById('shakeFlash');
+let waitingForShake=false,lastShake=0,activated=false;
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let r;
+if(SR){
+r=new SR();
+r.lang='zh-HK';
+r.continuous=false;
+r.onstart=()=>{inputBorder.classList.add('listening');inputBorder.classList.remove('speaking');statusLabel.textContent='🔴 監聽中...';mainInput.value='';};
+r.onresult=(e)=>{const t=e.results[0][0].transcript;mainInput.value=t;originText.textContent=t;waitingForShake=false;waitShake.classList.remove('show');translateAndSpeak(t);};
+r.onerror=(e)=>{statusLabel.textContent='⚠️ '+e.error;if(!waitingForShake)setTimeout(go,1000);};
+r.onend=()=>{inputBorder.classList.remove('listening');if(!waitingForShake&&!window.speechSynthesis.speaking)setTimeout(go,400);};
 }
-
-function startRec() {
-    try { recognition.start(); } catch(e) {}
+function go(){try{r.start();}catch(e){}}
+function activate(){
+if(activated)return;
+activated=true;
+startOverlay.style.display='none';
+const w=new SpeechSynthesisUtterance('');
+window.speechSynthesis.speak(w);
+window.speechSynthesis.cancel();
+if(typeof DeviceMotionEvent!=='undefined'&&typeof DeviceMotionEvent.requestPermission==='function')DeviceMotionEvent.requestPermission().catch(()=>{});
+go();
+statusLabel.textContent='🔴 監聽中...';
 }
-
-// ── 翻譯 ──────────────────────────────────
-async function translateAndSpeak(text) {
-    statusLabel.textContent = '⌛ 翻譯中...';
-    inputBorder.classList.remove('listening');
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=zh-HK&tl=en&dt=t&q=${encodeURI(text)}`;
-    try {
-        const res  = await fetch(url);
-        const data = await res.json();
-        const eng  = data[0][0][0];
-        translatedText.textContent = eng;
-        speak(eng);
-    } catch(err) {
-        statusLabel.textContent = '❌ 翻譯失敗，搖一搖重試';
-        waitingForShake = true;
-        waitShake.classList.add('show');
-    }
+startOverlay.addEventListener('click',activate);
+async function translateAndSpeak(text){
+statusLabel.textContent='⌛ 翻譯中...';
+inputBorder.classList.remove('listening');
+const url=`https://translate.googleapis.com/translate_a/single?client=gtx&sl=zh-HK&tl=en&dt=t&q=${encodeURI(text)}`;
+try{const res=await fetch(url);const data=await res.json();const eng=data[0][0][0];translatedText.textContent=eng;speak(eng);}
+catch(e){statusLabel.textContent='❌ 翻譯失敗';waitingForShake=true;waitShake.classList.add('show');}
 }
-
-// ── TTS 朗讀 ──────────────────────────────
-function speak(text) {
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'en-US';
-    u.rate = 0.9;
-
-    u.onstart = () => {
-        inputBorder.classList.add('speaking');
-        statusLabel.textContent = '🔊 朗讀中...';
-    };
-
-    u.onend = () => {
-        inputBorder.classList.remove('speaking');
-        // 朗讀完畢，進入等待搖動狀態
-        waitingForShake = true;
-        waitShake.classList.add('show');
-        statusLabel.textContent = '📱 搖一搖繼續';
-    };
-
-    u.onerror = () => {
-        inputBorder.classList.remove('speaking');
-        waitingForShake = true;
-        waitShake.classList.add('show');
-        statusLabel.textContent = '📱 搖一搖繼續';
-    };
-
-    window.speechSynthesis.speak(u);
+function speak(text){
+window.speechSynthesis.cancel();
+const u=new SpeechSynthesisUtterance(text);
+u.lang='en-US';u.rate=0.9;
+u.onstart=()=>{inputBorder.classList.add('speaking');statusLabel.textContent='🔊 朗讀中...';};
+u.onend=()=>{inputBorder.classList.remove('speaking');waitingForShake=true;waitShake.classList.add('show');statusLabel.textContent='📱 搖一搖繼續';};
+u.onerror=()=>{inputBorder.classList.remove('speaking');waitingForShake=true;waitShake.classList.add('show');statusLabel.textContent='📱 搖一搖繼續';};
+window.speechSynthesis.speak(u);
 }
-
-// ── overlay 啟動（用戶手勢，預熱 TTS）────
-function activate() {
-    if (activated) return;
-    activated = true;
-    startOverlay.style.display = 'none';
-
-    // 手勢內預熱 TTS
-    const warmup = new SpeechSynthesisUtterance('');
-    window.speechSynthesis.speak(warmup);
-    window.speechSynthesis.cancel();
-
-    // 請求 DeviceMotion 權限（iOS 需要，Android 直接跳過）
-    if (typeof DeviceMotionEvent !== 'undefined' &&
-        typeof DeviceMotionEvent.requestPermission === 'function') {
-        DeviceMotionEvent.requestPermission().catch(() => {});
-    }
-
-    startRec();
-    statusLabel.textContent = '🔴 監聽中...';
+window.addEventListener('devicemotion',(e)=>{
+if(!waitingForShake)return;
+const a=e.accelerationIncludingGravity;
+if(!a)return;
+const force=Math.abs(a.x)+Math.abs(a.y)+Math.abs(a.z);
+const now=Date.now();
+if(force>15&&now-lastShake>1200){
+lastShake=now;
+waitingForShake=false;
+waitShake.classList.remove('show');
+shakeFlash.classList.add('flash');
+setTimeout(()=>shakeFlash.classList.remove('flash'),150);
+window.speechSynthesis.cancel();
+statusLabel.textContent='🔴 監聽中...';
+go();
 }
-
-startOverlay.addEventListener('click', activate);
-
-// ── 搖一搖（HTTPS 下 Android 有效）────────
-window.addEventListener('devicemotion', (e) => {
-    if (!waitingForShake) return;
-    const a = e.accelerationIncludingGravity;
-    if (!a) return;
-    const force = Math.abs(a.x) + Math.abs(a.y) + Math.abs(a.z);
-    const now = Date.now();
-    if (force > 15 && now - lastShake > 1200) {
-        lastShake = now;
-        waitingForShake = false;
-        waitShake.classList.remove('show');
-
-        // 閃光反饋
-        shakeFlash.classList.add('flash');
-        setTimeout(() => shakeFlash.classList.remove('flash'), 150);
-
-        window.speechSynthesis.cancel();
-        statusLabel.textContent = '🔴 監聽中...';
-        startRec();
-    }
 });
 </script>
 </body>
